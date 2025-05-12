@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>JSON → HTML Table Converter</title>
@@ -8,6 +9,7 @@
       font-family: Arial, sans-serif;
       margin: 20px;
     }
+
     textarea {
       width: 100%;
       max-width: 800px;
@@ -15,31 +17,41 @@
       font-family: monospace;
       margin-bottom: 10px;
     }
+
     button {
       padding: 8px 16px;
       font-size: 1rem;
       cursor: pointer;
     }
+
     #output {
       margin-top: 20px;
     }
+
     table {
       border-collapse: collapse;
       width: 100%;
       max-width: 800px;
     }
-    table, th, td {
+
+    table,
+    th,
+    td {
       border: 1px solid #666;
     }
-    th, td {
+
+    th,
+    td {
       padding: 6px 8px;
       text-align: left;
     }
+
     th {
       background: #f0f0f0;
     }
   </style>
 </head>
+
 <body>
   <h1>JSON → HTML Table Converter</h1>
   <textarea id="jsonInput" placeholder="Paste your JSON here…"></textarea><br>
@@ -60,27 +72,52 @@
       },
 
       generateTable(data) {
-        let table = '<table>';
+        // handle explicit nulls
+        if (data === null) {
+          return "null";
+        }
+
+        let table = '<table border="1" style="width:100%;">';
+
         try {
-          // If data is an array
+          // ARRAY CASE
           if (Array.isArray(data)) {
             if (data.length === 0) {
               table += "<tr><td>No Data</td></tr>";
             }
-            // array of objects
-            else if (typeof data[0] === "object" && data[0] !== null) {
-              const headers = Object.keys(data[0]);
-              // header row
+            // array of objects?
+            else if (data.some(item => item && typeof item === "object")) {
+              // 1) collect a union of all keys
+              const allKeys = new Set();
+              data.forEach(item => {
+                if (item && typeof item === "object") {
+                  Object.keys(item).forEach(k => allKeys.add(k));
+                }
+              });
+              // turn into array, optionally sort so "id" comes first
+              let headers = Array.from(allKeys);
+              headers.sort((a, b) => {
+                if (a === "id") return -1;
+                if (b === "id") return 1;
+                return a.localeCompare(b);
+              });
+
+              // 2) render header row
               table += "<thead><tr>";
               headers.forEach((h, i) => {
-                table += `<th>${this.insertSpaceBeforeUppercase(h)} (${i+1})</th>`;
+                table += `<th>${this.insertSpaceBeforeUppercase(h)} (${i + 1})</th>`;
               });
               table += "</tr></thead><tbody>";
-              // data rows
+
+              // 3) render each row
               data.forEach((row, rowIndex) => {
                 table += "<tr>";
                 headers.forEach(h => {
-                  table += `<td>${this.generateTable(row[h])} (${rowIndex+1})</td>`;
+                  // if this row is null or missing the key, pass null
+                  const cell = (row && typeof row === "object" && h in row)
+                    ? row[h]
+                    : null;
+                  table += `<td>${this.generateTable(cell)} (${rowIndex + 1})</td>`;
                 });
                 table += "</tr>";
               });
@@ -90,33 +127,38 @@
             else {
               table += "<tr>";
               data.forEach((val, i) => {
-                table += `<td>${val} (${i+1})</td>`;
+                table += `<td>${val} (${i + 1})</td>`;
               });
               table += "</tr>";
             }
           }
-          // If data is a plain object
-          else if (typeof data === "object" && data !== null) {
+
+          // OBJECT CASE
+          else if (typeof data === "object") {
             const keys = Object.keys(data);
             table += "<thead><tr><th>Attribute</th><th>Value</th></tr></thead><tbody>";
             keys.forEach((key, idx) => {
               table += `<tr>
-                          <td>${this.insertSpaceBeforeUppercase(key)} (${idx+1})</td>
-                          <td>${this.generateTable(data[key])}</td>
-                        </tr>`;
+                    <td>${this.insertSpaceBeforeUppercase(key)} (${idx + 1})</td>
+                    <td>${this.generateTable(data[key])}</td>
+                  </tr>`;
             });
             table += "</tbody>";
           }
-          // primitive value
+
+          // PRIMITIVE CASE
           else {
-            return (data !== null && data !== undefined) ? String(data) : "";
+            return String(data);
           }
-        } catch (err) {
+        }
+        catch (err) {
           console.error("Error generating table:", err);
           return "<tr><td colspan='2'>Error generating table</td></tr>";
         }
+
         return table + "</table>";
       },
+
 
       // Inserts spaces before uppercase letters in camelCase strings
       insertSpaceBeforeUppercase(str) {
@@ -126,7 +168,7 @@
 
     // Wire up the button
     document.getElementById("convertBtn").addEventListener("click", () => {
-      const input  = document.getElementById("jsonInput").value.trim();
+      const input = document.getElementById("jsonInput").value.trim();
       const output = document.getElementById("output");
 
       if (!input) {
@@ -149,4 +191,5 @@
     });
   </script>
 </body>
+
 </html>
