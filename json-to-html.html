@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JSON → HTML Table Converter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    textarea {
+      width: 100%;
+      max-width: 800px;
+      height: 200px;
+      font-family: monospace;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 8px 16px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 800px;
+    }
+    table, th, td {
+      border: 1px solid #666;
+    }
+    th, td {
+      padding: 6px 8px;
+      text-align: left;
+    }
+    th {
+      background: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <h1>JSON → HTML Table Converter</h1>
+  <textarea id="jsonInput" placeholder="Paste your JSON here…"></textarea><br>
+  <button id="convertBtn">Convert</button>
+  <div id="output"></div>
+
+  <script>
+    // Our converter object holding all helper methods
+    const converter = {
+      convertJsonToHtmlTable(jsonData) {
+        try {
+          console.log("### generate data:", JSON.stringify(jsonData));
+          return this.generateTable(jsonData);
+        } catch (error) {
+          console.error("Error converting JSON to HTML table:", error);
+          return "<p style='color:red;'>Error converting JSON to HTML table</p>";
+        }
+      },
+
+      generateTable(data) {
+        let table = '<table>';
+        try {
+          // If data is an array
+          if (Array.isArray(data)) {
+            if (data.length === 0) {
+              table += "<tr><td>No Data</td></tr>";
+            }
+            // array of objects
+            else if (typeof data[0] === "object" && data[0] !== null) {
+              const headers = Object.keys(data[0]);
+              // header row
+              table += "<thead><tr>";
+              headers.forEach((h, i) => {
+                table += `<th>${this.insertSpaceBeforeUppercase(h)} (${i+1})</th>`;
+              });
+              table += "</tr></thead><tbody>";
+              // data rows
+              data.forEach((row, rowIndex) => {
+                table += "<tr>";
+                headers.forEach(h => {
+                  table += `<td>${this.generateTable(row[h])} (${rowIndex+1})</td>`;
+                });
+                table += "</tr>";
+              });
+              table += "</tbody>";
+            }
+            // simple array of primitives
+            else {
+              table += "<tr>";
+              data.forEach((val, i) => {
+                table += `<td>${val} (${i+1})</td>`;
+              });
+              table += "</tr>";
+            }
+          }
+          // If data is a plain object
+          else if (typeof data === "object" && data !== null) {
+            const keys = Object.keys(data);
+            table += "<thead><tr><th>Attribute</th><th>Value</th></tr></thead><tbody>";
+            keys.forEach((key, idx) => {
+              table += `<tr>
+                          <td>${this.insertSpaceBeforeUppercase(key)} (${idx+1})</td>
+                          <td>${this.generateTable(data[key])}</td>
+                        </tr>`;
+            });
+            table += "</tbody>";
+          }
+          // primitive value
+          else {
+            return (data !== null && data !== undefined) ? String(data) : "";
+          }
+        } catch (err) {
+          console.error("Error generating table:", err);
+          return "<tr><td colspan='2'>Error generating table</td></tr>";
+        }
+        return table + "</table>";
+      },
+
+      // Inserts spaces before uppercase letters in camelCase strings
+      insertSpaceBeforeUppercase(str) {
+        return str.replace(/(?<!^)([A-Z])/g, " $1");
+      }
+    };
+
+    // Wire up the button
+    document.getElementById("convertBtn").addEventListener("click", () => {
+      const input  = document.getElementById("jsonInput").value.trim();
+      const output = document.getElementById("output");
+
+      if (!input) {
+        output.innerHTML = "<p style='color:orange;'>Please paste some JSON above.</p>";
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(input);
+      } catch (err) {
+        console.error("Invalid JSON:", err);
+        output.innerHTML = "<p style='color:red;'>Invalid JSON: " + err.message + "</p>";
+        return;
+      }
+
+      // Generate and inject the HTML table
+      const html = converter.convertJsonToHtmlTable(parsed);
+      output.innerHTML = html;
+    });
+  </script>
+</body>
+</html>
