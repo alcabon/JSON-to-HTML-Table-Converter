@@ -24,5 +24,6 @@ A simple, standalone HTML+JavaScript page that lets you paste any JSON (objects,
 
 ### Installation
 
-1. **Clone the repository**  
+1. **Clone the repository**
+2. **Open:** `json-to-html.html` 
 
